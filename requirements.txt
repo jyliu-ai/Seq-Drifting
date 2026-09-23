@@ -1,0 +1,10 @@
+# Install a CUDA-compatible PyTorch build separately on the training server.
+torch>=2.1
+numpy>=1.24
+transformers>=4.45,<5
+datasets>=2.19,<5
+sacrebleu>=2.4
+rouge-score>=0.1.2
+nltk>=3.8
+zstandard>=0.21
+pyarrow>=14
