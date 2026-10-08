@@ -2,6 +2,7 @@
 torch>=2.1
 numpy>=1.24
 transformers>=4.45,<5
+huggingface_hub>=0.34,<1
 datasets>=2.19,<5
 sacrebleu>=2.4
 rouge-score>=0.1.2

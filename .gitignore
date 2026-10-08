@@ -4,7 +4,6 @@ __pycache__/
 *.egg-info/
 runs/
 data/
-models/
 teachers/
 *.pt
 *.bin

@@ -37,6 +37,7 @@ case "$DATASET" in
 esac
 
 EXTRA=()
+[ "${FROM_SCRATCH:-1}" = "1" ] && EXTRA+=(--from-scratch)
 [ "$GRAD_CKPT" = "1" ] && EXTRA+=(--gradient-checkpointing)
 [ "${BF16:-1}" = "0" ] && EXTRA+=(--no-bf16)
 [ "${MAX_TRAIN:-0}" != "0" ] && EXTRA+=(--max-train "$MAX_TRAIN")
@@ -45,7 +46,7 @@ EXTRA=()
 [ "${SAVE_EVERY:-1000}" != "1000" ] && EXTRA+=(--save-every "$SAVE_EVERY")
 
 echo "[teacher] dataset=$DATASET base=$BASE_MODEL GPUs=$GPUS output=$OUTPUT_DIR"
-torchrun --standalone --nproc_per_node="$NPROC" -m cond_drift_seq2seq.train_teacher \
+torchrun --standalone --nproc_per_node="$NPROC" -m tasks.seq2seq.train_teacher \
     --dataset "$DATASET" --data-dir "$DATA_DIR" --base-model "$BASE_MODEL" \
     --output-dir "$OUTPUT_DIR" --condition-len "$COND_LEN" --target-len "$TARGET_LEN" \
     --epochs "$EPOCHS" --max-steps "$MAX_STEPS" --per-device-batch "$BATCH" \

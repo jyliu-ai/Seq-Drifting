@@ -11,7 +11,7 @@ EXTRA=()
 [[ -n "${RESUME:-}" ]] && EXTRA+=(--resume "$RESUME")
 echo "[data] train=$TRAIN_JSON eval=$EVAL_JSON"
 torchrun --standalone --nproc_per_node="${NPROC:-4}" \
-  -m cond_drift_reason.train_candidate_attraction \
+  -m tasks.reasoning.train \
   --train-json "$TRAIN_JSON" --test-json "$EVAL_JSON" \
   --teacher "$MODEL" --backbone "${BACKBONE:-$MODEL}" \
   --max-candidates "${MAX_CANDIDATES:-8}" \

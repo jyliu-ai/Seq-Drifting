@@ -13,7 +13,7 @@ EXTRA=()
 # Defaults below come from the equation curriculum launcher, not a verified
 # final GSM8K-Aug experiment configuration. Override using env or CLI arguments.
 torchrun --standalone --nproc_per_node="${NPROC:-4}" \
-  -m cond_drift_reason.train_candidate_attraction \
+  -m tasks.reasoning.train \
   --train-json "$TRAIN_JSON" --test-json "$EVAL_JSON" \
   --teacher "$MODEL" --backbone "${BACKBONE:-$MODEL}" \
   --max-candidates "${MAX_CANDIDATES:-1}" \
