@@ -5,6 +5,12 @@ cd "$ROOT"
 export PYTHONUNBUFFERED=1
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0,1,2,3}"
 DATASET=${DATASET:-owt}
+VARIANT=${VARIANT:-P}
+case "$VARIANT" in
+  P) TEACHER=${TEACHER:-gpt2} ;;
+  S) : "${TEACHER:?Set TEACHER to the frozen GPT-2 trained from scratch on the corresponding corpus}" ;;
+  *) echo "VARIANT must be P or S" >&2; exit 2 ;;
+esac
 case "$DATASET" in
   lm1b)
     : "${TRAIN_JSON:?Set TRAIN_JSON to prepared LM1B training prefix/continuation JSONL}"
@@ -22,7 +28,7 @@ case "$DATASET" in
   *) echo "DATASET must be lm1b or owt" >&2; exit 2 ;;
 esac
 torchrun --standalone --nproc_per_node="${NPROC:-4}" -m tasks.continuation.train \
-  --dataset "$DATASET" "${DATA_ARGS[@]}" --teacher "${TEACHER:-gpt2}" \
+  --dataset "$DATASET" "${DATA_ARGS[@]}" --teacher "$TEACHER" \
   --query-len "${QUERY_LEN:-64}" --resp-len "$RESP_LEN" \
   --uncond-warmup-steps "${UNCOND_WARMUP:-200000}" \
   --queries-per-step "$QPS" --k-samples "${KSAMP:-4}" \
@@ -32,4 +38,4 @@ torchrun --standalone --nproc_per_node="${NPROC:-4}" -m tasks.continuation.train
   --sphere-step geodesic --sphere-geo-max 1.5708 \
   --d-model 768 --nhead 12 --ffn-dim 3072 --num-layers 12 --noise-dim 128 \
   --lr "${LR:-2e-4}" --steps "${STEPS:-300000}" \
-  --ckpt-dir "${CKPT_DIR:-runs/conditional_$DATASET}" "$@"
+  --ckpt-dir "${CKPT_DIR:-runs/conditional_${DATASET}_$VARIANT}" "$@"

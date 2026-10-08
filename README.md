@@ -1,4 +1,4 @@
-# PAPER_TITLE_PLACEHOLDER
+# One-Step Text Generation by Seq-Drifting
 
 [Paper](ARXIV_URL_PLACEHOLDER) · [Checkpoints](https://huggingface.co/jyliuAI/Seq-Drifting)
 
@@ -20,48 +20,66 @@ Training uses four GPUs; testing uses one GPU and EMA weights. Set `NPROC`, `CUD
 
 ## 1. Unconditional generation
 
-No dataset is required for training or testing. The 128-token weights use the conditional generator at the end of unconditional warmup, with its constant visible prefix. The 1024 release uses the original unconditional generator; sequence length is read from the checkpoint.
+**P** uses public pretrained GPT-2 (`TEACHER=gpt2`). **S** uses a frozen GPT-2 trained from scratch on the corresponding corpus (`TEACHER=/path/to/scratch-gpt2`). `TEACHER` accepts a Hugging Face model ID or a local directory containing the model and tokenizer; it is not a Seq-Drifting `.pt` file.
+
+The 128-token weights use the conditional generator at the end of unconditional warmup, with its constant visible prefix. The 1024 release uses the original unconditional generator; sequence length is read from the checkpoint.
 
 ### Length 128
 
 ```bash
-# Train
-LENGTH=128 TEACHER=gpt2 bash scripts/train_unconditional.sh
+# Train P
+LENGTH=128 VARIANT=P TEACHER=gpt2 bash scripts/train_unconditional.sh
+
+# Train S: use the GPT-2 trained from scratch on LM1B
+LENGTH=128 VARIANT=S TEACHER=/path/to/lm1b-scratch-gpt2 \
+bash scripts/train_unconditional.sh
 
 # Test
 LENGTH=128 VARIANT=P bash scripts/eval_unconditional.sh
-LENGTH=128 VARIANT=S bash scripts/eval_unconditional.sh
+LENGTH=128 VARIANT=S MODEL=/path/to/lm1b-scratch-gpt2 bash scripts/eval_unconditional.sh
 ```
 
 ### Length 1024
 
 ```bash
-# Train
-LENGTH=1024 TEACHER=gpt2 bash scripts/train_unconditional.sh
+# Train P
+LENGTH=1024 VARIANT=P TEACHER=gpt2 bash scripts/train_unconditional.sh
+
+# Train S: use the GPT-2 trained from scratch on OpenWebText
+LENGTH=1024 VARIANT=S TEACHER=/path/to/owt-scratch-gpt2 \
+bash scripts/train_unconditional.sh
 
 # Test
 LENGTH=1024 VARIANT=P bash scripts/eval_unconditional.sh
 LENGTH=1024 VARIANT=S bash scripts/eval_unconditional.sh
 ```
 
-Tests select `unconditional_<length>_<variant>.pt`. For S weights, use the original frozen support model; if its saved path has moved, set `MODEL=/path/to/support-model` and, when needed, `TOKENIZER=/path/to/support-model`. Training accepts `TEACHER` for the support model.
+Tests select `unconditional_<length>_<variant>.pt`. For length 128, `MODEL` relocates the frozen model used for token embeddings. For length 1024, the embedding model is separate from `TEACHER`: training defaults to `EMBED_MODEL=gpt2 TOKENIZER=gpt2`, and testing reads these values from the checkpoint. Override `EMBED_MODEL` and `TOKENIZER` only with the original models if their saved paths have moved.
 
 ## 2. Conditional generation
 
 LM1B JSONL rows: `{"query": "prefix", "response": "continuation"}`. OpenWebText2 uses the original `*.jsonl.zst` shards. Training uses 200k warmup steps followed by 100k conditional steps.
 
+P/S have the same meaning as above. Set `TEACHER` for training and `MODEL` for testing to the same frozen GPT-2; use the LM1B support model for LM1B and the OpenWebText support model for OpenWebText2.
+
 ### LM1B: 64 → 64
 
 ```bash
-# Train
-DATASET=lm1b TRAIN_JSON=data/lm1b/train.jsonl TEST_JSON=data/lm1b/test.jsonl \
+# Train P
+DATASET=lm1b VARIANT=P TEACHER=gpt2 \
+TRAIN_JSON=data/lm1b/train.jsonl TEST_JSON=data/lm1b/test.jsonl \
+bash scripts/train_conditional.sh
+
+# Train S
+DATASET=lm1b VARIANT=S TEACHER=/path/to/lm1b-scratch-gpt2 \
+TRAIN_JSON=data/lm1b/train.jsonl TEST_JSON=data/lm1b/test.jsonl \
 bash scripts/train_conditional.sh
 
 # Test
 DATASET=lm1b TEST_JSON=data/lm1b/test.jsonl VARIANT=P \
 bash scripts/eval_conditional.sh
 
-DATASET=lm1b TEST_JSON=data/lm1b/test.jsonl VARIANT=S \
+DATASET=lm1b TEST_JSON=data/lm1b/test.jsonl VARIANT=S MODEL=/path/to/lm1b-scratch-gpt2 \
 bash scripts/eval_conditional.sh
 ```
 
@@ -70,15 +88,19 @@ Selects `conditional_64_P.pt` or `conditional_64_S.pt`.
 ### OpenWebText2: 64 → 512
 
 ```bash
-# Train
-DATASET=owt OWT_DIR=data/openwebtext2 bash scripts/train_conditional.sh
+# Train P
+DATASET=owt VARIANT=P TEACHER=gpt2 OWT_DIR=data/openwebtext2 bash scripts/train_conditional.sh
+
+# Train S
+DATASET=owt VARIANT=S TEACHER=/path/to/owt-scratch-gpt2 OWT_DIR=data/openwebtext2 \
+bash scripts/train_conditional.sh
 
 # Test
 DATASET=owt OWT_DIR=data/openwebtext2 CHECKPOINT=conditional_512_P.pt \
 bash scripts/eval_conditional.sh
 ```
 
-For a custom support model, set `TEACHER` during training and `MODEL` during testing.
+The OpenWebText2 example evaluates `conditional_512_P.pt`. To evaluate an S checkpoint, set `VARIANT=S MODEL=/path/to/owt-scratch-gpt2 CHECKPOINT=/path/to/conditional_512_S.pt`.
 
 ## 3. Translation: WMT14 De → En
 
@@ -147,8 +169,8 @@ bash scripts/eval_math.sh
 TRAIN_JSON=data/proofwriter_all_train.jsonl EVAL_JSON=data/proofwriter_all_dev.jsonl \
 MODEL=Qwen/Qwen2.5-0.5B bash scripts/train_proofwriter.sh
 
-# Test: local checkpoint (no ProofWriter weights are included in the release)
-TEST_JSON=data/proofwriter_all_test.jsonl CHECKPOINT=runs/proofwriter/step_60000.pt \
+# Test
+TEST_JSON=data/proofwriter_all_test.jsonl CHECKPOINT=proofwriter.pt \
 MODEL=Qwen/Qwen2.5-0.5B BACKBONE=Qwen/Qwen2.5-0.5B bash scripts/eval_proofwriter.sh
 ```
 

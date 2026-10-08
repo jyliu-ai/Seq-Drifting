@@ -5,7 +5,12 @@ cd "$ROOT"
 export PYTHONUNBUFFERED=1
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0,1,2,3}"
 LENGTH=${LENGTH:-128}
-TEACHER=${TEACHER:-gpt2}
+VARIANT=${VARIANT:-P}
+case "$VARIANT" in
+  P) TEACHER=${TEACHER:-gpt2} ;;
+  S) : "${TEACHER:?Set TEACHER to the frozen GPT-2 trained from scratch on the corresponding corpus}" ;;
+  *) echo "VARIANT must be P or S" >&2; exit 2 ;;
+esac
 if [[ "$LENGTH" = 128 ]]; then
   # This is the conditional architecture's last warm-up checkpoint.
   torchrun --standalone --nproc_per_node="${NPROC:-4}" -m tasks.continuation.train \
@@ -17,7 +22,7 @@ if [[ "$LENGTH" = 128 ]]; then
     --repel "${REPEL:-5}" --repel-intra "${REPEL_INTRA:-100}" --repel-whole-batch \
     --sphere-step geodesic --sphere-geo-max 1.5708 \
     --d-model 768 --nhead 12 --ffn-dim 3072 --num-layers 12 --noise-dim 128 \
-    --lr "${LR:-2e-4}" --ckpt-dir "${CKPT_DIR:-runs/unconditional_128}" "$@"
+    --lr "${LR:-2e-4}" --ckpt-dir "${CKPT_DIR:-runs/unconditional_128_$VARIANT}" "$@"
 elif [[ "$LENGTH" = 1024 ]]; then
   torchrun --standalone --nproc_per_node="${NPROC:-4}" -m tasks.unconditional.train \
     --seq-len "${SEQ_LEN:-1023}" --gen-per-step "${GEN_PER_STEP:-32}" \
@@ -30,7 +35,7 @@ elif [[ "$LENGTH" = 1024 ]]; then
     --gpt2-support thresh --gpt2-no-repeat-ngram 4 \
     --sphere-norm --sphere-step geodesic --sphere-geo-max 1.5708 --skip-bank \
     --tokenizer-name "${TOKENIZER:-gpt2}" --embed-model "${EMBED_MODEL:-gpt2}" \
-    --ckpt-dir "${CKPT_DIR:-runs/unconditional_1024}" --bf16 "$@"
+    --ckpt-dir "${CKPT_DIR:-runs/unconditional_1024_$VARIANT}" --bf16 "$@"
 else
   echo "LENGTH must be 128 or 1024" >&2; exit 2
 fi
