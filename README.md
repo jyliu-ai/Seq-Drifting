@@ -1,6 +1,6 @@
 # One-Step Text Generation by Seq-Drifting
 
-[Paper](ARXIV_URL_PLACEHOLDER) · [Checkpoints](https://huggingface.co/jyliuAI/Seq-Drifting)
+[Paper](http://arxiv.org/abs/2610.12879) · [Checkpoints](https://huggingface.co/jyliuAI/Seq-Drifting)
 
 ## Setup
 
